@@ -1,6 +1,11 @@
 #! /usr/bin/python3
 
-working_dir = '/home/pi/wb_update/'
+import sys
+import os
+
+working_dir = '/1home/pi/wb_update/'
+
+print(os.path.dirname(sys.argv[0]))
 
 class garment:
     def __init__(self, article):
