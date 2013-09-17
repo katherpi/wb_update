@@ -3,10 +3,8 @@
 import os.path as pth
 working_dir = pth.split(pth.realpath(__file__))[0]+'/'
 
-import sys.argv as argv
+from sys import argv
 all_garments_in_msg = len(argv) > 1 and argv[1] == '--all'
-
-
 
 class garment:
     def __init__(self, article):
@@ -37,7 +35,7 @@ def send_email(html):
 
     server = smtplib.SMTP('smtp.rambler.ru', 587)
     server.login(addr_from, "myfirstpython7")
-    server.sendmail(addr_from, addr_to, msg_mm.as_string())
+    server.sendmail(addr_from, addr_to, msg_mm)
     server.quit()
 
 
