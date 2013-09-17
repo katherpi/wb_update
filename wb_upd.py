@@ -5,7 +5,7 @@ import os
 
 working_dir = '/1home/pi/wb_update/'
 
-print(os.path.dirname(sys.argv[0]))
+print(os.path.split(os.path.realpath(__file__))[0]+'/')
 
 class garment:
     def __init__(self, article):
