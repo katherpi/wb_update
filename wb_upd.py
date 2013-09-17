@@ -1,11 +1,12 @@
 #! /usr/bin/python3
 
-import sys
-import os
+import os.path as pth
+working_dir = pth.split(pth.realpath(__file__))[0]+'/'
 
-working_dir = '/1home/pi/wb_update/'
+import sys.argv as argv
+all_garments_in_msg = len(argv) > 1 and argv[1] == '--all'
 
-print(os.path.split(os.path.realpath(__file__))[0]+'/')
+
 
 class garment:
     def __init__(self, article):
@@ -18,20 +19,25 @@ class garment:
         self.link = url_article.format(article)
         self.pictures = []
 
-def send_email(msg):
+def send_email(html):
     import smtplib
     from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
     addr_to = 'katherpi@mail.ru'
     addr_from = 'wildberries_price_update@ro.ru'
 
-    msg = MIMEText(msg.encode('cp866', 'ignore'))
-    msg['To'] = addr_to
-    msg['From'] = addr_from
-    msg['Subject'] = 'Wildberries update message'
+    msg_mm = MIMEMultipart('alternative')
+    msg_mm['To'] = addr_to
+    msg_mm['From'] = addr_from
+    msg_mm['Subject'] = 'WB update message'
+
+    msg = MIMEText(html, 'html')
+    msg_mm.attach(msg)
 
     server = smtplib.SMTP('smtp.rambler.ru', 587)
     server.login(addr_from, "myfirstpython7")
-    server.sendmail(addr_from, addr_to, msg.as_string())
+    server.sendmail(addr_from, addr_to, msg_mm.as_string())
     server.quit()
 
 
@@ -62,7 +68,11 @@ def get_price(garment):
 
         garment.description = str(soup.find_all(name='h3', attrs={'itemprop':'name'})[0].contents[0]).strip(' \n\t\r')
 
+        pic = soup.find_all(name = 'img', attrs={'id':'preview-large', 'itemprop':'image'})[0]['src']
+        if pic: garment.pictures.append(pic)
+
         return True
+
     else:
         # товара в наличии нет
 
@@ -82,12 +92,14 @@ def main_process():
     msg_new_in_stock = str()
     msg_old_in_stock = str()
     msg_out_of_stock = str()
+    msg_not_changed = str()
 
     msg_404 = str()
 
     count_new_in_stock = 1
     count_old_in_stock = 1
     count_out_of_stock = 1
+    count_not_changed = 1
 
     new_file = str()
 
@@ -124,6 +136,7 @@ def main_process():
         in_stock = get_price(new_garment)
 
         if in_stock == None:
+            # сайт не открылся, недоступен
             msg_404 += "{0} \n".format(new_garment.link)
             print('{0} IS INACCESSIBLE!'.format(new_garment.link))
             continue
@@ -132,22 +145,26 @@ def main_process():
 
         if new:
             if in_stock:
-                msg_new_in_stock += '\t{0}. {1.description}; цена - {1.new_price} RUR. Ссылка: {1.link}\n\n'.format(str(count_new_in_stock), new_garment)
+                msg_new_in_stock += '\t{0}. <a href="{1.link}">{1.description}</a>; цена - {1.new_price} RUR.<br> <img src="{1.pictures[0]}" height="300"> <br>'.format(str(count_new_in_stock), new_garment)
                 count_new_in_stock += 1
             else:
-                msg_out_of_stock += '\t{0}. {1.description}; ТОВАР РАСПРОДАН. Ссылка: {1.link}\n\n'.format(str(count_out_of_stock), new_garment)
+                msg_out_of_stock += '\t{0}. <a href="{1.link}">{1.description}</a>; ТОВАР РАСПРОДАН.<br>'.format(str(count_out_of_stock), new_garment)
                 count_out_of_stock += 1
         else:
             if in_stock:
                 diff = new_garment.new_price - new_garment.old_price
-                sign = '+' if diff > 0 else ''
                 if diff != 0:
-                    msg_old_in_stock += '\t{0}. {1.description}; старая цена = {1.old_price} RUR, новая цена = {1.new_price} RUR, разница = {2:+} RUR. Ссылка: {1.link}\n\n'.format( \
+                    msg_old_in_stock += '\t{0}. <a href="{1.link}">{1.description}</a>; старая цена = {1.old_price} RUR, новая цена = {1.new_price} RUR, разница = {2:+} RUR.<br> <img src="{1.pictures[0]}" height="300"> <br>'.format( \
                                                                         str(count_old_in_stock), new_garment,  diff)
                     count_old_in_stock += 1
+                elif all_garments_in_msg:
+                    msg_not_changed += '\t{0}. <a href="{1.link}">{1.description}</a>; <img src="{1.pictures[0]}" height="300"> <br>'.format(str(count_not_changed), new_garment)
+                    count_not_changed += 1
+
             else:
+
                 if new_garment.old_price != 0 and new_garment.new_price == 0:
-                    msg_out_of_stock += '\t{0}. {1.description}; ТОВАР РАСПРОДАН. Ссылка: {1.link}\n\n'.format(str(count_out_of_stock), new_garment)
+                    msg_out_of_stock += '\t{0}. <a href="{1.link}">{1.description}</a>; ТОВАР РАСПРОДАН.<br>'.format(str(count_out_of_stock), new_garment)
                     count_out_of_stock += 1
 
         if not in_stock:
@@ -157,13 +174,16 @@ def main_process():
 
     count_all = count_out_of_stock + count_old_in_stock + count_new_in_stock
 
-    msg = 'WILDBERRIES.RU PRICE UPDATE \n\n\n\n\n\n'
+    msg = '<html><head>WILDBERRIES.RU PRICE UPDATE</head> <body><br><br><br><br>'
     if count_new_in_stock > 1:
-        msg += 'Новые добавленные: \n\n{0}'.format(msg_new_in_stock)
+        msg += 'Новые добавленные: <br><br>{0}'.format(msg_new_in_stock)
     if count_old_in_stock > 1:
-        msg += '\n\nТовары с изменившимися ценами: \n\n{0}'.format(msg_old_in_stock)
+        msg += '<br><br>Товары с изменившимися ценами: <br><br>{0}'.format(msg_old_in_stock)
     if count_out_of_stock > 1:
-        msg += '\n\nТовары, отсутствующие в продаже: \n\n{0}'.format(msg_out_of_stock)
+        msg += '<br><br>Товары, отсутствующие в продаже: <br><br>{0}'.format(msg_out_of_stock)
+    if count_not_changed > 1:
+        msg += '<br><br>Товары с неизменившимися ценами: <br><br>{0}'.format(msg_not_changed)
+    msg += '</body></html>'
 
     file.close()
 
