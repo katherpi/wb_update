@@ -2,8 +2,6 @@
 
 working_dir = '/home/pi/wb_update/'
 
-# ololo
-
 class garment:
     def __init__(self, article):
         url_article = 'http://www.wildberries.ru/catalog/{0}/detail.aspx'
