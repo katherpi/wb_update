@@ -30,12 +30,12 @@ def send_email(html):
     msg_mm['From'] = addr_from
     msg_mm['Subject'] = 'WB update message'
 
-    msg = MIMEText(html, 'html')
+    msg = MIMEText(html, 'html', 'utf_8')
     msg_mm.attach(msg)
 
     server = smtplib.SMTP('smtp.rambler.ru', 587)
     server.login(addr_from, "myfirstpython7")
-    server.sendmail(addr_from, addr_to, msg_mm)
+    server.sendmail(addr_from, addr_to, msg_mm.as_string())
     server.quit()
 
 
@@ -170,22 +170,16 @@ def main_process():
 
         new_file += '{0.article} {0.new_price} {0.description} {0.link}\n'.format(new_garment)
 
-    count_all = count_out_of_stock + count_old_in_stock + count_new_in_stock
-
-    msg = '<html><head>WILDBERRIES.RU PRICE UPDATE</head> <body><br><br><br><br>'
-    if count_new_in_stock > 1:
-        msg += 'Новые добавленные: <br><br>{0}'.format(msg_new_in_stock)
-    if count_old_in_stock > 1:
-        msg += '<br><br>Товары с изменившимися ценами: <br><br>{0}'.format(msg_old_in_stock)
-    if count_out_of_stock > 1:
-        msg += '<br><br>Товары, отсутствующие в продаже: <br><br>{0}'.format(msg_out_of_stock)
-    if count_not_changed > 1:
-        msg += '<br><br>Товары с неизменившимися ценами: <br><br>{0}'.format(msg_not_changed)
-    msg += '</body></html>'
-
     file.close()
 
-    if count_all > 3:
+    msg = '<html><head>WILDBERRIES.RU PRICE UPDATE</head> <body><br><br><br><br>'
+    msg += ('Новые добавленные: <br><br>{0}'.format(msg_new_in_stock) if msg_new_in_stock else '')
+    msg += ('<br><br>Товары с изменившимися ценами: <br><br>{0}'.format(msg_old_in_stock) if msg_old_in_stock else '')
+    msg += ('<br><br>Товары, отсутствующие в продаже: <br><br>{0}'.format(msg_out_of_stock) if msg_out_of_stock else '')
+    msg += ('<br><br>Товары с неизменившимися ценами: <br><br>{0}'.format(msg_not_changed) if msg_not_changed else '')
+    msg += '</body></html>'
+
+    if any((msg_new_in_stock, msg_old_in_stock, msg_out_of_stock, msg_not_changed)):
         send_email(msg)
 
     file = open(filename, 'w', encoding='utf_8')
