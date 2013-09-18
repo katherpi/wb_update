@@ -6,6 +6,8 @@ working_dir = pth.split(pth.realpath(__file__))[0]+'/'
 from sys import argv
 all_garments_in_msg = len(argv) > 1 and argv[1] == '--all'
 
+width_of_td = 200
+
 class garment:
     def __init__(self, article):
         url_article = 'http://www.wildberries.ru/catalog/{0}/detail.aspx'
@@ -38,6 +40,21 @@ def send_email(html):
     server.sendmail(addr_from, addr_to, msg_mm.as_string())
     server.quit()
 
+def make_table(lst):
+    num_colomns_tr = 3
+
+    lst2 = ['<td width="{0}">'.format(width_of_td) + x + '</td>' for x in lst]
+    table = str()
+
+    for i in range(0, len(lst2), num_colomns_tr):
+        new_tr = ''.join(lst2[:num_colomns_tr])
+        table += '<tr>' + new_tr + '</tr>'
+        lst2 = lst2[num_colomns_tr+1:]
+
+    ost = ''.join(lst2)
+    if ost : table += '<tr>' + ost + '</tr>'
+
+    return '<table>' + table + '</table>'
 
 def get_price(garment):
     from bs4 import BeautifulSoup
@@ -87,10 +104,10 @@ def get_price(garment):
 def main_process():
     filename = working_dir + 'closing_wb.dat'
 
-    msg_new_in_stock = str()
-    msg_old_in_stock = str()
+    msg_new_in_stock = []
+    msg_old_in_stock = []
     msg_out_of_stock = str()
-    msg_not_changed = str()
+    msg_not_changed = []
 
     msg_404 = str()
 
@@ -98,6 +115,7 @@ def main_process():
     count_old_in_stock = 1
     count_out_of_stock = 1
     count_not_changed = 1
+
 
     new_file = str()
 
@@ -143,27 +161,30 @@ def main_process():
 
         if new:
             if in_stock:
-                msg_new_in_stock += '\t{0}. <a href="{1.link}">{1.description}</a>; цена - {1.new_price} RUR.<br> <img src="{1.pictures[0]}" height="300"> <br>'.format(str(count_new_in_stock), new_garment)
+                msg_new_in_stock.append('{0}.<a href="{1.link}">{1.description}</a>; цена - {1.new_price} RUR.<br> <img src="{1.pictures[0]}" width="{2}">'.format(str(count_new_in_stock), new_garment, width_of_td))
                 count_new_in_stock += 1
             else:
-                msg_out_of_stock += '\t{0}. <a href="{1.link}">{1.description}</a>; ТОВАР РАСПРОДАН.<br>'.format(str(count_out_of_stock), new_garment)
+                msg_out_of_stock += '{0}. <a href="{1.link}">{1.description}</a>; ТОВАР РАСПРОДАН.<br>'.format(str(count_out_of_stock), new_garment)
                 count_out_of_stock += 1
         else:
             if in_stock:
                 diff = new_garment.new_price - new_garment.old_price
                 if diff != 0:
-                    msg_old_in_stock += '\t{0}. <a href="{1.link}">{1.description}</a>; старая цена = {1.old_price} RUR, новая цена = {1.new_price} RUR, разница = {2:+} RUR.<br> <img src="{1.pictures[0]}" height="300"> <br>'.format( \
-                                                                        str(count_old_in_stock), new_garment,  diff)
+                    msg_old_in_stock.append('{0}. <a href="{1.link}">{1.description}</a>; старая цена = {1.old_price} RUR, новая цена = {1.new_price} RUR, разница = {2:+} RUR.<br> <img src="{1.pictures[0]}" width="{3}">'.format( \
+                                                                        str(count_old_in_stock), new_garment,  diff, width_of_td))
                     count_old_in_stock += 1
                 elif all_garments_in_msg:
-                    msg_not_changed += '\t{0}. <a href="{1.link}">{1.description}</a>; <img src="{1.pictures[0]}" height="300"> <br>'.format(str(count_not_changed), new_garment)
+                    msg_not_changed.append('{0}. <a href="{1.link}">{1.description}</a>; <br> <img src="{1.pictures[0]}" width="{2}">'.format(str(count_not_changed), new_garment, width_of_td))
                     count_not_changed += 1
 
             else:
-
-                if new_garment.old_price != 0 and new_garment.new_price == 0:
-                    msg_out_of_stock += '\t{0}. <a href="{1.link}">{1.description}</a>; ТОВАР РАСПРОДАН.<br>'.format(str(count_out_of_stock), new_garment)
+                if all_garments_in_msg:
+                    msg_out_of_stock += '{0}. <a href="{1.link}">{1.description}</a>; цена - {1.new_price} <br>'.format(str(count_out_of_stock), new_garment)
                     count_out_of_stock += 1
+                elif new_garment.old_price != 0 and new_garment.new_price == 0:
+                    msg_out_of_stock += '{0}. <a href="{1.link}">{1.description}</a>; ТОВАР РАСПРОДАН.<br>'.format(str(count_out_of_stock), new_garment)
+                    count_out_of_stock += 1
+
 
         if not in_stock:
             print('OUT OF STOCK')
@@ -173,10 +194,10 @@ def main_process():
     file.close()
 
     msg = '<html><head>WILDBERRIES.RU PRICE UPDATE</head> <body><br><br><br><br>'
-    msg += ('Новые добавленные: <br><br>{0}'.format(msg_new_in_stock) if msg_new_in_stock else '')
-    msg += ('<br><br>Товары с изменившимися ценами: <br><br>{0}'.format(msg_old_in_stock) if msg_old_in_stock else '')
+    msg += ('Новые добавленные: <br><br>{0}'.format(make_table(msg_new_in_stock)) if msg_new_in_stock else '')
+    msg += ('<br><br>Товары с изменившимися ценами: <br><br>{0}'.format(make_table(msg_old_in_stock)) if msg_old_in_stock else '')
     msg += ('<br><br>Товары, отсутствующие в продаже: <br><br>{0}'.format(msg_out_of_stock) if msg_out_of_stock else '')
-    msg += ('<br><br>Товары с неизменившимися ценами: <br><br>{0}'.format(msg_not_changed) if msg_not_changed else '')
+    msg += ('<br><br>Товары с неизменившимися ценами: <br><br>{0}'.format(make_table(msg_not_changed)) if msg_not_changed else '')
     msg += '</body></html>'
 
     if any((msg_new_in_stock, msg_old_in_stock, msg_out_of_stock, msg_not_changed)):
