@@ -41,7 +41,7 @@ def send_email(html):
     server.quit()
 
 def make_table(lst):
-    num_colomns_tr = 3
+    num_colomns_tr = 4
 
     lst2 = ['<td width="{0}">'.format(width_of_td) + x + '</td>' for x in lst]
     table = str()
@@ -116,7 +116,6 @@ def main_process():
     count_out_of_stock = 1
     count_not_changed = 1
 
-
     new_file = str()
 
     file = open(filename, encoding='utf_8')
@@ -174,12 +173,12 @@ def main_process():
                                                                         str(count_old_in_stock), new_garment,  diff, width_of_td))
                     count_old_in_stock += 1
                 elif all_garments_in_msg:
-                    msg_not_changed.append('{0}. <a href="{1.link}">{1.description}</a>; <br> <img src="{1.pictures[0]}" width="{2}">'.format(str(count_not_changed), new_garment, width_of_td))
+                    msg_not_changed.append('{0}. <a href="{1.link}">{1.description}</a>; цена - {1.new_price} RUR. <br><br> <img src="{1.pictures[0]}" width="{2}">'.format(str(count_not_changed), new_garment, width_of_td))
                     count_not_changed += 1
 
             else:
                 if all_garments_in_msg:
-                    msg_out_of_stock += '{0}. <a href="{1.link}">{1.description}</a>; цена - {1.new_price} <br>'.format(str(count_out_of_stock), new_garment)
+                    msg_out_of_stock += '{0}. <a href="{1.link}">{1.description}</a>;'.format(str(count_out_of_stock), new_garment)
                     count_out_of_stock += 1
                 elif new_garment.old_price != 0 and new_garment.new_price == 0:
                     msg_out_of_stock += '{0}. <a href="{1.link}">{1.description}</a>; ТОВАР РАСПРОДАН.<br>'.format(str(count_out_of_stock), new_garment)
