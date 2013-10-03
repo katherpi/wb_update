@@ -1,7 +1,8 @@
 #! /usr/bin/python3
 
-import os.path as pth
-working_dir = pth.split(pth.realpath(__file__))[0]+'/'
+import sys
+import os
+working_dir = sys.path[0] + os.sep
 
 from sys import argv
 all_garments_in_msg = len(argv) > 1 and argv[1] == '--all'
@@ -210,27 +211,26 @@ def main_process():
 
 
 def main():
-    err_msg = str()
+    from io import StringIO
+    import time
+
+    log = StringIO()
+    print('{0}, PROCESS STARTED\n'.format(str(time.ctime())), file=log)
 
     try:
-        file = open(working_dir + 'wb_log.dat', 'w', encoding='utf_8')
-
-        import time
-        print('{0}, PROCESS STARTED\n'.format(str(time.ctime())), file=file)
-
         msg1 = main_process()
 
         if msg1:
-            err_msg += 'Следующие ссылки были недоступны:\n{0}\n'.format(msg1)
+            print('Следующие ссылки были недоступны:\n{0}\n'.format(msg1), file=log)
 
     except Exception as exc:
-        err_msg += "EXCEPTION:\n{0}\n".format(exc)
+        print("EXCEPTION:\n{0}\n".format(exc), file=log)
         raise
     finally:
-        if err_msg:
-            print(err_msg, file=file)
+        print('\nPROCESS ENDED', file=log)
 
-        print('\nPROCESS ENDED', file=file)
+        file = open(working_dir + 'wb_log.dat', 'w', encoding='utf_8')
+        print(log.getvalue(), file=file)
         file.close()
 
 
